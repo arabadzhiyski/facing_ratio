@@ -1,0 +1,78 @@
+int fitcosangle = chi("fit_cos_angle");
+int useramp = chi("use_ramp");
+int tracevisible = chi("trace_visible");
+int traceocclgeo = chi("trace_occl_geo");
+int mode = chi("mode");
+int space = chi("space");
+
+string attribname = chs("attribute_name");
+string maskattribname = chs("mask_attribute_name");
+string camera = chs("camera");
+string path = opfullpath("../..");
+
+vector I;
+vector dir = chv("dir");
+
+matrix M = optransform(camera);
+matrix Q = optransform(path);
+
+Q = invert(Q);
+
+if(mode == 0){
+    M *= Q;
+    vector pos = cracktransform(0, 0, 0, {0,0,0}, M);
+    I = @P - pos;
+    }
+    
+else{
+    I = normalize(dir);
+    if(space)
+        I = vtransform(I, Q);
+    }
+    
+//Calculate cos angle
+float cosangle = dot(normalize(I), normalize(v@N));
+if(fitcosangle)
+    cosangle = fit11(cosangle, 0, 1);
+
+if(useramp){
+    cosangle = chramp("cosangle_ramp", cosangle);
+    float cosangle_min = chf("cosangle_min");
+    float cosangle_max = chf("cosangle_max");
+    cosangle = fit01(cosangle, cosangle_min, cosangle_max);
+    }
+    
+setpointattrib(0, attribname, @ptnum, cosangle, "set");
+
+//Trace visible
+if(tracevisible){
+    vector hit;
+    float u, v;
+    int hitoccl = -1;
+    int hitprim = intersect(0, @P + (v@N * 0.001), -I, hit, u, v);
+    
+    if(traceocclgeo)
+        hitoccl = intersect(1, @P + (v@N * 0.001), -I, hit, u, v);
+    
+    float visible = (hitprim != -1 || hitoccl != -1) ? 0 : 1;
+    setpointattrib(0, maskattribname, @ptnum, visible, "set");
+    }
+    
+    
+
+    
+    
+
+    
+//POTENTIAL FEATURE
+
+//vector z = set(M.zx,M.zy,M.zz);
+
+// Perspective mat
+// float focal = ch(concat(camera, "/focal"));
+// float aspect = ch(concat(camera, "/aspect"));
+// vector2 res = set(ch(concat(camera, "/resx")), ch(concat(camera, "/resy")));
+// float aperture = ch(concat(camera, "/aperture"));
+// float near = ch(concat(camera, "/near"));
+// float far = ch(concat(camera, "/far"));
+// matrix N = perspective(focal/aperture, res[0]/res[1], aspect, near, far);
